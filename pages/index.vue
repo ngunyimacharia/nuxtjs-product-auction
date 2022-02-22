@@ -16,21 +16,20 @@
 
       <!-- Bids -->
       <div class="mt-4 lg:mt-0 lg:row-span-3">
-          <p v-if="!bids">Loading bids...</p>
-          <ul v-else role="list" class="divide-y divide-gray-200">
-            <li v-for="bid in bids" :key="bid.id" class="py-4">
+          <ul v-if="winningBid" role="list" class="divide-y divide-gray-200">
+            <li class="py-4">
               <div class="flex space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
                 <div class="flex-1 space-y-1">
                   <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-medium">{{bid.name}}</h3>
-                    <p class="text-sm text-gray-500">$ {{new Intl.NumberFormat().format(bid.amount)}}</p>
+                    <h3 class="text-sm font-medium">{{winningBid.name}}</h3>
+                    <p class="text-sm text-gray-500">$ {{new Intl.NumberFormat().format(winningBid.amount)}}</p>
                   </div>
                   <p class="text-sm text-gray-500">
                     {{
-                      (new Date(bid.created_at)).toLocaleString("en-US")
+                      (new Date(winningBid.created_at)).toLocaleString("en-US")
                     }}
                   </p>
                 </div>
@@ -38,8 +37,8 @@
             </li>
           </ul>
 
-          <div class="min-h-full flex flex-col justify-center py-12 px-5">
-            <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div class="py-5 pb-10">
+            <div class="sm:mx-auto sm:w-full sm:max-w-md">
               <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
                 <form class="space-y-6" @submit.prevent="sendBid">
                   <div>
@@ -74,13 +73,35 @@
                     <button 
                       type="submit" 
                       class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >Bid</button>
+                    >Place Bid</button>
                   </div>
                 </form>
 
               </div>
             </div>
           </div>
+
+          <p v-if="!bids">Loading bids...</p>
+          <ul v-else role="list" class="divide-y divide-gray-200">
+            <li v-for="bid in bids" :key="bid.id" class="py-4">
+              <div class="flex space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <div class="flex-1 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-medium">{{bid.name}}</h3>
+                    <p class="text-sm text-gray-500">$ {{new Intl.NumberFormat().format(bid.amount)}}</p>
+                  </div>
+                  <p class="text-sm text-gray-500">
+                    {{
+                      (new Date(bid.created_at)).toLocaleString("en-US")
+                    }}
+                  </p>
+                </div>
+              </div>
+            </li>
+          </ul>
 
       </div>
 
@@ -154,6 +175,7 @@ export default {
     return {
       gallery:null,
       supabase:null,
+      winningBid:null,
       bids:null,
       newBid:{
         name:null,
@@ -161,6 +183,7 @@ export default {
       }
     }
   },
+
   mounted(){
     this.gallery = cloudinary.galleryWidget({ 
       container: "#my-gallery", 
@@ -179,12 +202,23 @@ export default {
 
     this.loadBids();
 
+    this.listenToBids();
   },
+
+  beforeDestroy(){
+    console.log("Removing");
+    this.supabase.removeAllSubscriptions();
+  },
+
   methods:{
+
     async loadBids(){
+      this.loadWinningBid();
+
       const resp = await this.supabase
         .from('bids')
-        .select();
+        .select()
+        .order('id', { ascending: false });
 
       if(resp.status != 200){
         console.log(resp);
@@ -192,7 +226,31 @@ export default {
 
       this.bids = resp.data;
     },
-    
+
+    async loadWinningBid(){
+      const resp = await this.supabase
+        .from('bids')
+        .select()
+        .order('amount', { ascending: false }) 
+        .limit(1)
+        .single();
+
+      if(resp.status != 200){
+        console.log(resp);
+      }
+
+      this.winningBid = resp.data;
+    },
+
+    listenToBids(){
+      const subscription = this.supabase
+      .from('bids')
+      .on('*', () => {
+        this.loadBids();
+      })
+      .subscribe()
+    },
+
     async sendBid(){
       const resp = await this.supabase
         .from('bids')
@@ -204,7 +262,10 @@ export default {
             console.log(resp);
       }
 
-      this.loadBids();
+      this.newBid = {
+        name:null,
+        amount:null
+      };
     },
   }
 }
