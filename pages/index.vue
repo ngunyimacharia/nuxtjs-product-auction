@@ -78,6 +78,14 @@
           <div class="mt-4 space-y-6">
             <p class="text-sm text-gray-600">The 6-Pack includes two black, two white, and two heather gray Basic Tees. Sign up for our subscription service and be the first to get new, exciting colors, like our upcoming &quot;Charcoal Gray&quot; limited release.</p>
           </div>
+
+          <div>
+            Video by Ylanite Koppens from Pexels
+            Video by Ashutosh Sonwani from Pexels
+            Photo by Juan C. Palacios from Pexels
+            Photo by Skylar Kang from Pexels
+            Photo by Mark Stebnicki from Pexels
+          </div>
         </div>
       </div>
     </div>
