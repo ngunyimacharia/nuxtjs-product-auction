@@ -9,7 +9,9 @@
     "generate": "nuxt generate"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^1.30.5",
     "@tailwindcss/aspect-ratio": "^0.4.0",
+    "@tailwindcss/forms": "^0.4.0",
     "core-js": "^3.19.3",
     "nuxt": "^2.15.8",
     "vue": "^2.6.14",

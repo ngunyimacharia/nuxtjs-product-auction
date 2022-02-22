@@ -16,22 +16,71 @@
 
       <!-- Bids -->
       <div class="mt-4 lg:mt-0 lg:row-span-3">
-          <ul role="list" class="divide-y divide-gray-200">
-            <li class="py-4">
+          <p v-if="!bids">Loading bids...</p>
+          <ul v-else role="list" class="divide-y divide-gray-200">
+            <li v-for="bid in bids" :key="bid.id" class="py-4">
               <div class="flex space-x-3">
-                <img class="h-6 w-6 rounded-full" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=3&w=256&h=256&q=80" alt="">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
                 <div class="flex-1 space-y-1">
                   <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-medium">Lindsay Walton</h3>
-                    <p class="text-sm text-gray-500">1h</p>
+                    <h3 class="text-sm font-medium">{{bid.name}}</h3>
+                    <p class="text-sm text-gray-500">$ {{new Intl.NumberFormat().format(bid.amount)}}</p>
                   </div>
-                  <p class="text-sm text-gray-500">Deployed Workcation (2d89f0c8 in master) to production</p>
+                  <p class="text-sm text-gray-500">
+                    {{
+                      (new Date(bid.created_at)).toLocaleString("en-US")
+                    }}
+                  </p>
                 </div>
               </div>
             </li>
-
-            <!-- More items... -->
           </ul>
+
+          <div class="min-h-full flex flex-col justify-center py-12 px-5">
+            <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+              <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                <form class="space-y-6" @submit.prevent="sendBid">
+                  <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700"> Names </label>
+                    <div class="mt-1">
+                      <input 
+                        id="name" 
+                        name="name" 
+                        type="text" 
+                        v-model="newBid.name"
+                        required 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700"> Amount </label>
+                    <div class="mt-1">
+                      <input 
+                        id="amount" 
+                        name="amount" 
+                        type="number" 
+                        v-model="newBid.amount"
+                        required 
+                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <button 
+                      type="submit" 
+                      class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >Bid</button>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
 
       </div>
 
@@ -97,10 +146,19 @@
 </template>
 
 <script>
+
+import { createClient } from '@supabase/supabase-js'
+
 export default {
   data(){
     return {
-      gallery:null
+      gallery:null,
+      supabase:null,
+      bids:null,
+      newBid:{
+        name:null,
+        amount:null
+      }
     }
   },
   mounted(){
@@ -117,7 +175,37 @@ export default {
 
     this.gallery.render();
 
-    console.log("gallery",this.gallery);
+    this.supabase = createClient(process.env.NUXT_ENV_SUPABASE_URL, process.env.NUXT_ENV_SUPABASE_KEY);
+
+    this.loadBids();
+
+  },
+  methods:{
+    async loadBids(){
+      const resp = await this.supabase
+        .from('bids')
+        .select();
+
+      if(resp.status != 200){
+        console.log(resp);
+      }
+
+      this.bids = resp.data;
+    },
+    
+    async sendBid(){
+      const resp = await this.supabase
+        .from('bids')
+        .insert([
+          this.newBid
+        ]);
+
+      if(resp.status != 201){
+            console.log(resp);
+      }
+
+      this.loadBids();
+    },
   }
 }
 </script>
